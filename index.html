@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ella - Smart AI Assistant</title>
+    <title>Ella - The Smart AI</title>
     <style>
         body { margin: 0; background: #010409; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .orb { width: 140px; height: 140px; background: radial-gradient(circle, #00f2fe, #4facfe); border-radius: 50%; box-shadow: 0 0 40px #4facfe; cursor: pointer; transition: 0.5s; }
+        .orb { width: 140px; height: 140px; background: radial-gradient(circle, #00f2fe, #4facfe); border-radius: 50%; box-shadow: 0 0 40px #4facfe; cursor: pointer; }
         .orb.active { animation: pulse 1s infinite alternate; box-shadow: 0 0 60px #00f2fe; }
         #log { margin-top: 25px; font-size: 16px; color: #8b949e; text-align: center; padding: 0 20px; line-height: 1.5; }
         #error-msg { color: #ff7b72; font-size: 11px; margin-top: 10px; }
-        h1 { color: #4facfe; letter-spacing: 5px; font-size: 24px; margin-bottom: 5px; }
+        h1 { color: #4facfe; letter-spacing: 5px; font-size: 24px; }
         @keyframes pulse { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
     </style>
 </head>
@@ -18,7 +18,7 @@
     <div style="text-align: center;">
         <div class="orb" id="orb"></div>
         <h1>ELLA</h1>
-        <div id="log">একবার ক্লিক করে "এলা" ডাকুন...</div>
+        <div id="log">ক্লিক করে ডাকুন: "এলা ইউটিউব খোলো"</div>
         <div id="error-msg"></div>
     </div>
 
@@ -26,10 +26,6 @@
     const orb = document.getElementById('orb');
     const log = document.getElementById('log');
     const errMsg = document.getElementById('error-msg');
-
-    // তোমার দেওয়া নতুন কী-টি এখানে এনকোড করা হলো (গুগল এটা সহজে পড়তে পারবে না)
-    const encodedData = "QUl6YVN5QXN3VmN2RXRrSlYzY2NkUFZsYjdyeE1mREphOW5hMmtJ";
-    const key = atob(encodedData);
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
@@ -40,10 +36,9 @@
         try {
             recognition.start();
             orb.classList.add('active');
-            log.innerText = "আমি শুনছি, এলা বলুন...";
-            // ব্ল্যাঙ্ক সাউন্ড প্লে করা যাতে স্পিকার সচল হয়
+            log.innerText = "আমি শুনছি, বলুন...";
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
-        } catch(e) { console.log("Already running"); }
+        } catch(e) {}
     };
 
     recognition.onresult = (event) => {
@@ -53,14 +48,21 @@
         if (transcript.includes("এলা") || transcript.includes("ella")) {
             let cmd = transcript.replace(/এলা|ella/g, "").trim();
             
-            // ইউটিউব বা আবহাওয়ার মতো জরুরি কাজ আগে হবে (কোনো দেরি হবে না)
-            if (cmd.includes("ইউটিউব")) {
+            // --- সরাসরি কমান্ড (জেমিনি ছাড়াই চলবে) ---
+            if (cmd.includes("ইউটিউব") || cmd.includes("youtube")) {
                 speak("ইউটিউব খুলছি।");
-                setTimeout(() => { window.location.href = "https://www.youtube.com"; }, 1000);
+                window.location.href = "https://www.youtube.com";
+                return;
+            } else if (cmd.includes("ফেসবুক") || cmd.includes("facebook")) {
+                speak("ফেসবুক ওপেন করছি।");
+                window.location.href = "https://www.facebook.com";
+                return;
             } else if (cmd.includes("আবহাওয়া")) {
-                speak("আপনার ঝাড়গ্রামের আবহাওয়া দেখুন।");
-                setTimeout(() => { window.location.href = "https://dasg79209-alt.github.io/jhargram.weather/weather.html"; }, 1000);
+                speak("ঝাড়গ্রামের আবহাওয়া দেখুন।");
+                window.location.href = "https://dasg79209-alt.github.io/jhargram.weather/weather.html";
+                return;
             } else {
+                // অন্য সব প্রশ্নের জন্য জেমিনি
                 askGemini(cmd);
             }
         }
@@ -68,27 +70,34 @@
 
     async function askGemini(q) {
         if(!q) return;
-        // লেটেস্ট স্টেবল মডেল ব্যবহার করা হয়েছে
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+
+        // সুরক্ষার জন্য এপিআই কী প্রম্পট পদ্ধতি
+        let myKey = localStorage.getItem("ella_secret_key");
+        if (!myKey) {
+            myKey = prompt("গুগলের সুরক্ষা বট থেকে বাঁচতে আপনার নতুন API Key টি এখানে দিন (এটি একবার দিলেই হবে):");
+            if (myKey) localStorage.setItem("ella_secret_key", myKey);
+            else return;
+        }
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${myKey}`;
         
         try {
-            const response = await fetch(url, {
+            const res = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ contents: [{ parts: [{ text: "উত্তর দাও ছোট করে বাংলায়: " + q }] }] })
             });
-            const data = await response.json();
+            const data = await res.json();
             
             if (data.error) {
-                errMsg.innerText = "Error: " + data.error.message;
-                speak("দুঃখিত, আমি জেমিনির সাথে কানেক্ট করতে পারছি না।");
+                errMsg.innerText = "Key Error! পেজ রিফ্রেশ করে নতুন সঠিক কি দিন।";
+                localStorage.removeItem("ella_secret_key"); // ভুল হলে ক্লিয়ার করে দেবে
             } else {
                 errMsg.innerText = "";
-                const reply = data.candidates[0].content.parts[0].text;
-                speak(reply);
+                speak(data.candidates[0].content.parts[0].text);
             }
         } catch (e) {
-            errMsg.innerText = "নেটওয়ার্ক এরর!";
+            errMsg.innerText = "নেটওয়ার্ক সমস্যা!";
         }
     }
 
@@ -96,8 +105,6 @@
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang = 'bn-BD';
-        utter.pitch = 1.1; 
-        utter.rate = 1.0;
         window.speechSynthesis.speak(utter);
         log.innerText = "এলা: " + text;
     }
