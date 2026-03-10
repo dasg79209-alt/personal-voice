@@ -3,108 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ella AI - Final Pro</title>
+    <title>Ella AI - Smart Shield</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;600&display=swap');
-        body { margin: 0; background: #010409; color: #fff; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .container { text-align: center; width: 100%; max-width: 400px; padding: 20px; }
-        .orb { width: 140px; height: 140px; background: radial-gradient(circle, #00f2fe, #4facfe); border-radius: 50%; box-shadow: 0 0 30px #4facfe; margin: 0 auto 30px; cursor: pointer; transition: 0.5s; }
-        .orb.active { animation: pulse 1s infinite alternate; box-shadow: 0 0 60px #00f2fe; }
-        #log { font-size: 16px; color: #8b949e; min-height: 50px; margin-bottom: 15px; padding: 0 10px; }
-        #status { font-size: 12px; color: #4facfe; text-transform: uppercase; letter-spacing: 2px; }
-        @keyframes pulse { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
+        body { margin: 0; background: #010409; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .orb { width: 140px; height: 140px; background: radial-gradient(circle, #00f2fe, #4facfe); border-radius: 50%; box-shadow: 0 0 40px #4facfe; cursor: pointer; }
+        .orb.active { animation: pulse 1s infinite alternate; }
+        #log { margin-top: 20px; font-size: 16px; color: #8b949e; text-align: center; padding: 0 20px; }
+        @keyframes pulse { 0% { transform: scale(1); } 100% { transform: scale(1.1); } }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <div class="orb" id="orb"></div>
-    <h1 style="letter-spacing: 5px; color: #4facfe;">ELLA</h1>
-    <p id="status">একবার ক্লিক করুন</p>
-    <div id="log">"এলা ইউটিউব খোলো" বলে পরীক্ষা করুন</div>
-</div>
+    <div style="text-align: center;">
+        <div class="orb" id="orb"></div>
+        <h1 style="color: #4facfe; letter-spacing: 5px;">ELLA</h1>
+        <div id="log">ক্লিক করে বলুন: "এলা ইউটিউব খোলো"</div>
+    </div>
 
 <script>
     const orb = document.getElementById('orb');
     const log = document.getElementById('log');
-    const status = document.getElementById('status');
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'bn-BD';
     recognition.continuous = true;
-    recognition.interimResults = false;
 
     orb.onclick = () => {
         try {
             recognition.start();
             orb.classList.add('active');
-            status.innerText = "আমি শুনছি...";
-            window.speechSynthesis.speak(new SynthesisUtterance(""));
+            log.innerText = "আমি শুনছি...";
         } catch(e) {}
     };
 
     recognition.onresult = (event) => {
         const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
-        log.innerText = "আপনি বলেছেন: " + transcript;
+        log.innerText = "আপনি: " + transcript;
 
         if (transcript.includes("এলা") || transcript.includes("ella")) {
-            const cmd = transcript.replace(/এলা|ella/g, "").trim();
-            handleCommands(cmd);
+            let cmd = transcript.replace(/এলা|ella/g, "").trim();
+            
+            // --- সুপার ফাস্ট কমান্ড (জেমিনি ছাড়াই চলবে) ---
+            if (cmd.includes("ইউটিউব") || cmd.includes("youtube")) {
+                speak("ইউটিউব খুলছি।");
+                window.location.href = "https://www.youtube.com";
+                return;
+            } 
+            if (cmd.includes("ফেসবুক") || cmd.includes("facebook")) {
+                speak("ফেসবুক খুলছি।");
+                window.location.href = "https://www.facebook.com";
+                return;
+            }
+            if (cmd.includes("আবহাওয়া")) {
+                speak("ঝাড়গ্রামের আবহাওয়া দেখুন।");
+                window.location.href = "https://dasg79209-alt.github.io/jhargram.weather/weather.html";
+                return;
+            }
+
+            // জেমিনির জন্য প্রশ্ন হলে এখানে যাবে
+            askGemini(cmd);
         }
     };
 
-    function handleCommands(cmd) {
-        if (!cmd) return;
-
-        // সরাসরি অফলাইন কমান্ড (সবচেয়ে ফাস্ট)
-        if (cmd.includes("ইউটিউব")) {
-            speak("ইউটিউব খুলছি।");
-            setTimeout(() => window.location.href = "https://www.youtube.com", 1000);
-        } 
-        else if (cmd.includes("ফেসবুক")) {
-            speak("ফেসবুক ওপেন করছি।");
-            setTimeout(() => window.location.href = "https://www.facebook.com", 1000);
-        }
-        else if (cmd.includes("আবহাওয়া")) {
-            speak("ঝাড়গ্রামের আবহাওয়া দেখুন।");
-            setTimeout(() => window.location.href = "https://dasg79209-alt.github.io/jhargram.weather/weather.html", 1000);
-        }
-        else {
-            askGemini(cmd);
-        }
-    }
-
     async function askGemini(q) {
-        let savedKey = localStorage.getItem("ella_final_key");
-        if (!savedKey) {
-            savedKey = prompt("সুরক্ষার জন্য আপনার নতুন API Key টি দিন (এটি একবার দিলেই হবে):");
-            if (savedKey) localStorage.setItem("ella_final_key", savedKey);
+        let key = localStorage.getItem("ella_pro_key");
+        if (!key) {
+            key = prompt("API Key দিন (গিটহাবের সুরক্ষার জন্য এটি একবারই লাগবে):");
+            if (key) localStorage.setItem("ella_pro_key", key);
             else return;
         }
 
-        status.innerText = "এলা ভাবছে...";
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${savedKey}`;
-
         try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
             const res = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: "Answer in short Bengali: " + q }] }] })
+                body: JSON.stringify({ contents: [{ parts: [{ text: "উত্তর দাও ছোট করে বাংলায়: " + q }] }] })
             });
             const data = await res.json();
             
             if (data.error) {
-                localStorage.removeItem("ella_final_key");
-                speak("এপিআই কি ভুল হয়েছে। পেজ রিফ্রেশ করে নতুন কি দিন।");
+                log.innerText = "এপিআই কি ভুল হয়েছে। আবার দিতে পেজ রিফ্রেশ করুন।";
+                localStorage.removeItem("ella_pro_key");
             } else {
-                const reply = data.candidates[0].content.parts[0].text;
-                speak(reply);
+                speak(data.candidates[0].content.parts[0].text);
             }
         } catch (e) {
-            speak("কানেকশনে সমস্যা হচ্ছে, আবার চেষ্টা করুন।");
-        } finally {
-            status.innerText = "আমি শুনছি...";
+            log.innerText = "কানেকশন সমস্যা।";
         }
     }
 
