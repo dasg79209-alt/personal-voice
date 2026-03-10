@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ella - Smart AI</title>
+    <title>Ella - Fast AI</title>
     <style>
-        body { margin: 0; background: #020617; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .orb { width: 140px; height: 140px; background: radial-gradient(circle, #38bdf8, #1e40af); border-radius: 50%; box-shadow: 0 0 30px #1e40af; cursor: pointer; transition: 0.5s; }
-        .orb.active { animation: pulse 1s infinite alternate; box-shadow: 0 0 60px #38bdf8; }
-        #log { margin-top: 30px; font-size: 16px; color: #94a3b8; text-align: center; padding: 0 20px; }
-        #error-msg { color: #f87171; font-size: 12px; margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 10px; }
+        body { margin: 0; background: #010409; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .orb { width: 140px; height: 140px; background: radial-gradient(circle, #00f2fe, #4facfe); border-radius: 50%; box-shadow: 0 0 40px #4facfe; cursor: pointer; }
+        .orb.active { animation: pulse 1s infinite alternate; }
+        #log { margin-top: 20px; font-size: 16px; color: #8b949e; text-align: center; padding: 0 20px; }
+        #error-msg { color: #ff7b72; font-size: 11px; margin-top: 10px; }
         @keyframes pulse { 0% { transform: scale(1); } 100% { transform: scale(1.1); } }
     </style>
 </head>
 <body>
     <div style="text-align: center;">
         <div class="orb" id="orb"></div>
-        <h1 style="letter-spacing: 5px; color: #38bdf8; margin-top: 20px;">ELLA</h1>
-        <div id="log">একবার ক্লিক করে "এলা" ডাকুন...</div>
+        <h1 style="color: #4facfe; letter-spacing: 5px;">ELLA</h1>
+        <div id="log">একবার ক্লিক করে বলুন: "এলা ইউটিউব খোলো"</div>
         <div id="error-msg"></div>
     </div>
 
@@ -26,7 +26,7 @@
     const log = document.getElementById('log');
     const errMsg = document.getElementById('error-msg');
 
-    // তোমার সেই কি-টি এনকোড করা অবস্থায় এখানে আছে
+    // তোমার এপিআই কি
     const key = atob("QUl6YVN5QzdTQkVmYktTMkY0T0puQnZuM2ZkZVB2U1puSG03RWR3");
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -38,9 +38,9 @@
         try {
             recognition.start();
             orb.classList.add('active');
-            log.innerText = "আমি শুনছি, এলা বলুন...";
+            log.innerText = "আমি শুনছি...";
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
-        } catch(e) { console.log("Restarting..."); }
+        } catch(e) {}
     };
 
     recognition.onresult = (event) => {
@@ -50,40 +50,43 @@
         if (transcript.includes("এলা") || transcript.includes("ella")) {
             let cmd = transcript.replace(/এলা|ella/g, "").trim();
             
-            // অফলাইন কমান্ড সবার আগে
+            // ইউটিউব বা ওয়েদার হলে সাথে সাথে অ্যাকশন নেবে (কোনো দেরি হবে না)
             if (cmd.includes("ইউটিউব")) {
                 speak("ইউটিউব খুলছি।");
-                window.open("https://www.youtube.com", "_blank");
+                window.location.href = "https://www.youtube.com"; // ফোনের জন্য এটি বেশি দ্রুত
+                return;
             } else if (cmd.includes("আবহাওয়া")) {
                 speak("ঝাড়গ্রামের আবহাওয়া দেখুন।");
-                window.open("https://dasg79209-alt.github.io/jhargram.weather/weather.html", "_blank");
-            } else {
-                askGemini(cmd);
-            }
+                window.location.href = "https://dasg79209-alt.github.io/jhargram.weather/weather.html";
+                return;
+            } 
+            
+            // অন্য সব প্রশ্নের জন্য জেমিনি
+            askGemini(cmd);
         }
     };
 
     async function askGemini(q) {
         if(!q) return;
-        // এখানে ভার্সন v1 এবং মডেল gemini-1.5-flash ব্যবহার করা হয়েছে
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${key}`;
+        // জেমিনি প্রো মডেল ব্যবহার করছি যা সব জায়গায় চলে
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${key}`;
         
         try {
             const response = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: "উত্তর দাও ছোট করে বাংলায়: " + q }] }] })
+                body: JSON.stringify({ contents: [{ parts: [{ text: "সংক্ষেপে উত্তর দাও: " + q }] }] })
             });
             const data = await response.json();
             
             if (data.error) {
                 errMsg.innerText = "Error: " + data.error.message;
             } else {
-                errMsg.innerText = ""; // এরর মুছে দাও
+                errMsg.innerText = "";
                 speak(data.candidates[0].content.parts[0].text);
             }
         } catch (e) {
-            errMsg.innerText = "Network Error!";
+            errMsg.innerText = "কানেকশন সমস্যা!";
         }
     }
 
