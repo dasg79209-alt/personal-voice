@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ella AI - Smart Shield</title>
+    <title>Ella AI - Smart Response</title>
     <style>
-        body { margin: 0; background: #010409; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .orb { width: 140px; height: 140px; background: radial-gradient(circle, #00f2fe, #4facfe); border-radius: 50%; box-shadow: 0 0 40px #4facfe; cursor: pointer; }
-        .orb.active { animation: pulse 1s infinite alternate; }
-        #log { margin-top: 20px; font-size: 16px; color: #8b949e; text-align: center; padding: 0 20px; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .orb { width: 140px; height: 140px; background: #00f2fe; border-radius: 50%; box-shadow: 0 0 40px #00f2fe; cursor: pointer; transition: 0.3s; }
+        .orb.listening { animation: pulse 1s infinite alternate; background: #fff; }
+        #log { margin-top: 25px; font-size: 18px; color: #00f2fe; text-align: center; padding: 0 20px; min-height: 40px; }
         @keyframes pulse { 0% { transform: scale(1); } 100% { transform: scale(1.1); } }
     </style>
 </head>
 <body>
     <div style="text-align: center;">
         <div class="orb" id="orb"></div>
-        <h1 style="color: #4facfe; letter-spacing: 5px;">ELLA</h1>
-        <div id="log">ক্লিক করে বলুন: "এলা ইউটিউব খোলো"</div>
+        <h1 style="letter-spacing: 5px; color: #00f2fe; margin-top: 20px;">ELLA</h1>
+        <div id="log">একবার ক্লিক করে কথা বলুন...</div>
     </div>
 
 <script>
@@ -25,83 +25,53 @@
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
+    
     recognition.lang = 'bn-BD';
-    recognition.continuous = true;
+    recognition.continuous = false; // এটি গুরুত্বপূর্ণ: কথা শেষ হলে নিজে থেকেই থামবে
+    recognition.interimResults = false;
 
     orb.onclick = () => {
-        try {
-            recognition.start();
-            orb.classList.add('active');
-            log.innerText = "আমি শুনছি...";
-        } catch(e) {}
+        recognition.start();
+        orb.classList.add('listening');
+        log.innerText = "আমি শুনছি...";
     };
 
     recognition.onresult = (event) => {
-        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
-        log.innerText = "আপনি: " + transcript;
+        orb.classList.remove('listening');
+        const transcript = event.results[0][0].transcript.toLowerCase();
+        log.innerText = "আপনি বলেছেন: " + transcript;
 
-        if (transcript.includes("এলা") || transcript.includes("ella")) {
-            let cmd = transcript.replace(/এলা|ella/g, "").trim();
-            
-            // --- সুপার ফাস্ট কমান্ড (জেমিনি ছাড়াই চলবে) ---
-            if (cmd.includes("ইউটিউব") || cmd.includes("youtube")) {
-                speak("ইউটিউব খুলছি।");
-                window.location.href = "https://www.youtube.com";
-                return;
-            } 
-            if (cmd.includes("ফেসবুক") || cmd.includes("facebook")) {
-                speak("ফেসবুক খুলছি।");
-                window.location.href = "https://www.facebook.com";
-                return;
-            }
-            if (cmd.includes("আবহাওয়া")) {
-                speak("ঝাড়গ্রামের আবহাওয়া দেখুন।");
-                window.location.href = "https://dasg79209-alt.github.io/jhargram.weather/weather.html";
-                return;
-            }
-
-            // জেমিনির জন্য প্রশ্ন হলে এখানে যাবে
-            askGemini(cmd);
+        // কমান্ড চেক করা
+        if (transcript.includes("ইউটিউব") || transcript.includes("youtube")) {
+            speak("অবশ্যই, ইউটিউব খুলছি।");
+            setTimeout(() => { window.location.href = "https://www.youtube.com"; }, 1500);
+        } 
+        else if (transcript.includes("ফেসবুক") || transcript.includes("facebook")) {
+            speak("ফেসবুক ওপেন করছি।");
+            setTimeout(() => { window.location.href = "https://www.facebook.com"; }, 1500);
+        }
+        else if (transcript.includes("আবহাওয়া")) {
+            speak("ঝাড়গ্রামের আবহাওয়া দেখুন।");
+            setTimeout(() => { window.location.href = "https://dasg79209-alt.github.io/jhargram.weather/weather.html"; }, 1500);
+        }
+        else {
+            // অন্য সাধারণ প্রশ্নের জন্য জেমিনি ছাড়াই ছোট উত্তর
+            speak("আমি শুধু ইউটিউব, ফেসবুক বা আবহাওয়া খুলতে পারি।");
         }
     };
 
-    async function askGemini(q) {
-        let key = localStorage.getItem("ella_pro_key");
-        if (!key) {
-            key = prompt("API Key দিন (গিটহাবের সুরক্ষার জন্য এটি একবারই লাগবে):");
-            if (key) localStorage.setItem("ella_pro_key", key);
-            else return;
-        }
-
-        try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
-            const res = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: "উত্তর দাও ছোট করে বাংলায়: " + q }] }] })
-            });
-            const data = await res.json();
-            
-            if (data.error) {
-                log.innerText = "এপিআই কি ভুল হয়েছে। আবার দিতে পেজ রিফ্রেশ করুন।";
-                localStorage.removeItem("ella_pro_key");
-            } else {
-                speak(data.candidates[0].content.parts[0].text);
-            }
-        } catch (e) {
-            log.innerText = "কানেকশন সমস্যা।";
-        }
-    }
+    recognition.onend = () => {
+        orb.classList.remove('listening');
+        // কথা শেষ হওয়ার পর সে আবার রেডি হয়ে যাবে ৩ সেকেন্ড পর
+        setTimeout(() => { log.innerText = "আবার ডাকুন..."; }, 3000);
+    };
 
     function speak(text) {
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang = 'bn-BD';
         window.speechSynthesis.speak(utter);
-        log.innerText = "এলা: " + text;
     }
-
-    recognition.onend = () => recognition.start();
 </script>
 </body>
 </html>
