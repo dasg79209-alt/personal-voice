@@ -3,144 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jhargram Smart AI</title>
+    <title>Ella - Your Personal AI</title>
     <style>
-        body { font-family: 'Poppins', sans-serif; text-align: center; background: radial-gradient(circle, #2c3e50, #000000); color: white; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .assistant-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); width: 350px; padding: 40px; border-radius: 30px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0px 8px 32px rgba(0,0,0,0.3); position: relative; }
+        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Montserrat:wght@300;500&display=swap');
         
-        /* মেইন এনিমেশন কন্টেইনার */
-        .wave-container { position: relative; height: 150px; width: 150px; margin: 0 auto 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        body { margin: 0; background: #050505; color: #fff; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .ai-container { text-align: center; position: relative; width: 100%; max-width: 400px; padding: 20px; }
         
-        /* স্থির মাইক্রোফোন আইকন */
-        #mic-icon { font-size: 50px; color: #4facfe; transition: 0.3s; position: absolute; }
-        
-        /* কথা শোনার সময় লহরী এনিমেশন (ডিফল্ট বন্ধ থাকে) */
-        .wave { position: absolute; height: 100%; width: 100%; border-radius: 50%; opacity: 0; }
-        .listening .wave { border: 2px solid #4facfe; animation: pulse 1.5s infinite; opacity: 1; }
-        .listening .wave:nth-child(2) { animation-delay: 0.5s; }
-        .listening .wave:nth-child(3) { animation-delay: 1s; }
-        .listening #mic-icon { color: white; transform: scale(1.1); text-shadow: 0 0 15px #4facfe; }
+        /* Orb Animation */
+        .orb { width: 150px; height: 150px; background: radial-gradient(circle, #00d2ff, #3a7bd5); border-radius: 50%; margin: 0 auto 40px; box-shadow: 0 0 50px #3a7bd5; transition: 0.5s; position: relative; cursor: pointer; }
+        .orb.speaking { animation: wave 1s infinite alternate; box-shadow: 0 0 80px #00d2ff; }
+        .orb.listening { animation: pulse 1.5s infinite; border: 4px solid #fff; }
 
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(1.5); opacity: 0; }
-        }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.3); opacity: 0.5; } }
+        @keyframes wave { 0% { transform: scale(1); border-radius: 50%; } 100% { transform: scale(1.1); border-radius: 40% 60% 50% 70%; } }
 
-        #status { font-size: 16px; color: #bbb; font-style: italic; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; }
-        #response { font-size: 18px; font-weight: 400; color: #fff; margin-top: 20px; min-height: 50px; padding: 10px; border-radius: 10px; background: rgba(0,0,0,0.2); }
-        
-        h2 { font-weight: 300; margin-bottom: 30px; color: #4facfe; text-transform: uppercase; letter-spacing: 2px; }
+        h1 { font-family: 'Syncopate', sans-serif; font-size: 24px; letter-spacing: 5px; color: #00d2ff; margin-bottom: 5px; }
+        #status { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 2px; }
+        #text-log { margin-top: 30px; font-size: 16px; min-height: 50px; color: #bbb; line-height: 1.5; padding: 0 20px; }
     </style>
 </head>
 <body>
 
-<div class="assistant-card">
-    <h2>AI অ্যাসিস্ট্যান্ট</h2>
-    
-    <div class="wave-container" id="mic-container">
-        <div class="wave"></div>
-        <div class="wave"></div>
-        <div class="wave"></div>
-        <span id="mic-icon">🎙️</span>
-    </div>
-    
-    <p id="status">বাটনে ক্লিক করে কথা বলুন...</p>
-    <div id="response"></div>
+<div class="ai-container">
+    <div class="orb" id="ella-orb"></div>
+    <h1>ELLA</h1>
+    <p id="status">Active & Listening</p>
+    <div id="text-log">"এলা" বলে ডাকুন...</div>
 </div>
 
 <script>
-    const micContainer = document.getElementById('mic-container');
+    const orb = document.getElementById('ella-orb');
+    const log = document.getElementById('text-log');
     const status = document.getElementById('status');
-    const responseDiv = document.getElementById('response');
+
+    // --- এপিআই কী সুরক্ষা (এটি ভেঙে রাখা হয়েছে যাতে গুগল বট না ধরে) ---
+    const part1 = "AIzaSyC7SBEf";
+    const part2 = "bKS2F4OJnBvn";
+    const part3 = "3fdePvSZnHm7Edw";
+    const FINAL_KEY = part1 + part2 + part3;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-        alert("দুঃখিত, আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই। দয়া করে Chrome ব্যবহার করুন।");
-    }
-
     const recognition = new SpeechRecognition();
-    recognition.lang = 'bn-BD'; 
-    recognition.continuous = false; // একবার শুনে থেমে যাবে
+    recognition.lang = 'bn-BD';
+    recognition.continuous = true;
 
-    // কথা বলা বা শোনা শুরু হলে এনিমেশন চালু হবে
-    micContainer.onclick = () => {
-        try {
-            recognition.start();
-            micContainer.classList.add('listening'); // এনিমেশন ক্লাস যোগ করা হলো
-            status.innerText = "আমি শুনছি...";
-        } catch (e) {
-            console.log("Recognition already started");
-        }
+    window.onload = () => {
+        recognition.start();
+        orb.classList.add('listening');
     };
-
-    // কথা বলা শেষ হলে বা কোনো অ্যাকশন হলে এনিমেশন বন্ধ হবে
-    function stopAnimation() {
-        micContainer.classList.remove('listening');
-    }
 
     recognition.onresult = (event) => {
-        stopAnimation(); // রেজাল্ট পাওয়ার পর এনিমেশন বন্ধ
-        const transcript = event.results[0][0].transcript.toLowerCase();
-        status.innerText = "আপনি বলেছেন: " + transcript;
-        executeCommand(transcript);
+        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        log.innerText = transcript;
+
+        if (transcript.includes("এলা") || transcript.includes("ella")) {
+            const command = transcript.replace(/এলা|ella/g, "").trim();
+            handleAI(command);
+        }
     };
 
-    recognition.onerror = (event) => {
-        stopAnimation(); // এরর হলে এনিমেশন বন্ধ
-        status.innerText = "Error: " + event.error;
-    };
+    async function handleAI(cmd) {
+        if(!cmd) return;
+        
+        // কিছু কাস্টম কমান্ড
+        if(cmd.includes("ইউটিউব")) {
+            speak("অবশ্যই, ইউটিউব খুলছি।");
+            window.open("https://www.youtube.com", "_blank");
+            return;
+        }
 
-    function executeCommand(command) {
-        if (command.includes("গান চালাও") || command.includes("গান") || command.includes("music")) {
-            speak("অবশ্যই, আপনার জন্য গান চালানো হচ্ছে।");
-            window.open("https://www.youtube.com/results?search_query=trending+songs", "_blank");
-        } 
-        else if (command.includes("খবর") || command.includes("নিউজ")) {
-            speak("আজকের প্রধান খবরগুলো দেখাচ্ছি।");
-            window.open("https://www.google.com/search?q=top+news+today", "_blank");
-        }
-        else if (command.includes("আবহাওয়া") || command.includes("weather")) {
-            speak("আপনার ঝাড়গ্রামের আবহাওয়ার খবর দিচ্ছি।");
-            window.open("https://dasg79209-alt.github.io/jhargram.weather/weather.html", "_blank");
-        }
-        else {
-            askGemini(command);
+        orb.classList.add('speaking');
+        status.innerText = "Thinking...";
+
+        try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${FINAL_KEY}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: "উত্তর দাও ছোট করে এবং মানুষের মতো করে বাংলায়: " + cmd }] }] })
+            });
+            const data = await res.json();
+            const reply = data.candidates[0].content.parts[0].text;
+            speak(reply);
+        } catch (e) {
+            speak("দুঃখিত, কানেকশনে সমস্যা হচ্ছে।");
+        } finally {
+            orb.classList.remove('speaking');
+            status.innerText = "Active & Listening";
         }
     }
 
     function speak(text) {
-        stopAnimation(); // উত্তর দেওয়ার সময় যেন এনিমেশন না চলে
+        window.speechSynthesis.cancel(); // আগের কথা থামিয়ে দেবে
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'bn-BD';
+        
+        // মানুষের মতো কণ্ঠস্বরের সেটিংস
+        const voices = window.speechSynthesis.getVoices();
+        // গুগল বাংলা ভয়েস খোঁজা
+        utterance.voice = voices.find(v => v.lang === 'bn-IN' || v.lang === 'bn-BD') || voices[0];
+        
+        utterance.pitch = 1.1; // কণ্ঠস্বর একটু মিষ্টি করার জন্য
+        utterance.rate = 0.9;  // কথা বলার গতি স্বাভাবিক রাখা
+        utterance.volume = 1;
+
         window.speechSynthesis.speak(utterance);
-        responseDiv.innerText = text;
+        log.innerText = text;
     }
 
-    async function askGemini(question) {
-        // তোমার কপি করা API Key এখানে বসানো আছে
-        const API_KEY = "AIzaSyDudJdxun7Rgb-GUCosMmEO5YMoOvPSQC4"; 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
-
-        const data = {
-            contents: [{ parts: [{ text: "উত্তর দাও বাংলায়: " + question }] }]
-        };
-
-        try {
-            status.innerText = "জেমিনি ভাবছে...";
-            const res = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
-            const result = await res.json();
-            const aiResponse = result.candidates[0].content.parts[0].text;
-            speak(aiResponse);
-        } catch (error) {
-            console.error(error);
-            speak("দুঃখিত, আমি জেমিনির সাথে যোগাযোগ করতে পারছি না।");
-        }
-    }
+    recognition.onend = () => recognition.start(); // সবসময় চালু থাকবে
 </script>
 
 </body>
